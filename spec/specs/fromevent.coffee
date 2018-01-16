@@ -41,6 +41,84 @@ describe "Bacon.fromEvent", ->
       [["x", "y"]]
     )
 
+  describe "event options", ->
+    test = (optionsOrUseCapture, eventTransformer = (x) -> x) ->
+      # Basic EventTarget implementation for testing
+      TestEventTarget = ->
+        @eventEmitter = new EventEmitter
+        @addListenerCalls = []
+        @removeListenerCalls = []
+        return
+
+      TestEventTarget::addEventListener = (name, handler, optionsOrUseCapture) ->
+        @eventEmitter.addListener name, handler
+        @addListenerCalls.push
+          name: name
+          handler: handler
+          optionsOrUseCapture: optionsOrUseCapture
+        return
+
+      TestEventTarget::removeEventListener = (name, handler, optionsOrUseCapture) ->
+        @eventEmitter.removeListener name, handler
+        @removeListenerCalls.push
+          name: name
+          handler: handler
+          optionsOrUseCapture: optionsOrUseCapture
+        return
+
+      TestEventTarget::emit = (name, value) ->
+        @eventEmitter.emit name, value
+        return
+
+      TestEventTarget::listeners = (name) ->
+        @eventEmitter.listeners name
+
+      EVENT_NAME = "test"
+      values = []
+      target = new TestEventTarget()
+      stream = null
+
+      if optionsOrUseCapture? and eventTransformer?
+        stream = Bacon.fromEvent(target, EVENT_NAME, optionsOrUseCapture, eventTransformer)
+      else if optionsOrUseCapture?
+        stream = Bacon.fromEvent(target, EVENT_NAME, optionsOrUseCapture)
+      else
+        stream = Bacon.fromEvent(target, EVENT_NAME, eventTransformer)
+
+      handler = (value) ->
+        values.push(value)
+        return
+
+      # Test subscribe
+      unsubscribe = stream.onValue(handler)
+      expect(target.addListenerCalls.length).to.equal(1)
+      expect(target.addListenerCalls[0].name).to.equal(EVENT_NAME)
+      expect(target.addListenerCalls[0].handler).to.be.a.function
+      expect(target.addListenerCalls[0].optionsOrUseCapture).to.deep.equal(optionsOrUseCapture)
+      expect(target.listeners(EVENT_NAME).length).to.equal(1)
+      expect(target.listeners(EVENT_NAME)[0]).to.be.a.function
+
+      # Test events being propagated correctly
+      target.emit EVENT_NAME, "Huzzah!"
+      expect(values).to.deep.equal([eventTransformer("Huzzah!")])
+
+      # Test unsubscribe
+      unsubscribe()
+      expect(target.removeListenerCalls.length).to.equal(1)
+      expect(target.removeListenerCalls[0].name).to.equal(EVENT_NAME)
+      expect(target.removeListenerCalls[0].handler).to.be.a.function
+      expect(target.removeListenerCalls[0].optionsOrUseCapture).to.deep.equal(optionsOrUseCapture)
+      expect(target.listeners(EVENT_NAME).length).to.equal(0)
+
+    it "should pass options to the target's subscribe and unsubscribe methods when no eventTransformer is provided", ->
+      test({passive: true, once: false})
+
+    it "should pass options to the target's subscribe and unsubscribe methods when an eventTransformer is provided", ->
+      test({passive: true, once: false}, (x) => [x, x])
+
+    it "should use the eventTransformer when options are not provided", ->
+      test(undefined, (x) => [x, x])
+
   it "should clean up event listeners from EventEmitter", ->
     emitter = new EventEmitter()
     take(1, Bacon.fromEvent(emitter, "data")).subscribe ->
