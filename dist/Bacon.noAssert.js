@@ -2721,14 +2721,14 @@
         throw new Error('No suitable event methods in ' + target);
     };
     Bacon.fromEventTarget = function (target, eventName) {
-        var optionsOrUseCapture = undefined, eventTransformer = undefined;
+        var listenerOptionsOrUseCapture = undefined, eventTransformer = undefined;
         for (var _len18 = arguments.length, args = Array(_len18 > 2 ? _len18 - 2 : 0), _key18 = 2; _key18 < _len18; _key18++) {
             args[_key18 - 2] = arguments[_key18];
         }
         if (_.isFunction(args[0])) {
             eventTransformer = args[0];
         } else {
-            optionsOrUseCapture = args[0];
+            listenerOptionsOrUseCapture = args[0];
             eventTransformer = args[1];
         }
         var _findHandlerMethods = findHandlerMethods(target);
@@ -2739,9 +2739,9 @@
             eventName
         ]);
         return withDesc(desc, Bacon.fromBinder(function (handler) {
-            sub.call(target, eventName, handler, optionsOrUseCapture);
+            sub.call(target, eventName, handler, listenerOptionsOrUseCapture);
             return function () {
-                return unsub.call(target, eventName, handler, optionsOrUseCapture);
+                return unsub.call(target, eventName, handler, listenerOptionsOrUseCapture);
             };
         }, eventTransformer));
     };

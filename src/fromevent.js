@@ -43,20 +43,20 @@ var findHandlerMethods = function(target) {
 };
 
 Bacon.fromEventTarget = function(target, eventName, ...args) {
-  let optionsOrUseCapture, eventTransformer;
+  let listenerOptionsOrUseCapture, eventTransformer;
 
   if (_.isFunction(args[0])) {
     [eventTransformer] = args;
   } else {
-    [optionsOrUseCapture, eventTransformer] = args;
+    [listenerOptionsOrUseCapture, eventTransformer] = args;
   }
 
   var [sub, unsub] = findHandlerMethods(target);
   var desc = new Bacon.Desc(Bacon, "fromEvent", [target, eventName]);
   return withDesc(desc, Bacon.fromBinder(function(handler) {
-    sub.call(target, eventName, handler, optionsOrUseCapture);
+    sub.call(target, eventName, handler, listenerOptionsOrUseCapture);
     return function() {
-      return unsub.call(target, eventName, handler, optionsOrUseCapture);
+      return unsub.call(target, eventName, handler, listenerOptionsOrUseCapture);
     };
   }, eventTransformer));
 };
